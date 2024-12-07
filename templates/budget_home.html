@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Budget{% endblock %}
+{% block content %}
+<h1>Family Budget</h1>
+<a href="{{ url_for('budgeting.add_category') }}" class="btn btn-primary">Add Category</a>
+<a href="{{ url_for('budgeting.add_expense') }}" class="btn btn-secondary">Add Expense</a>
+
+<h2>Summary</h2>
+<p>Total Expenses: {{ total }}</p>
+<ul>
+{% for cat_id,info in category_sums.items() %}
+  <li>{{ info.name }}: Spent {{ info.total }} / Limit {{ info.limit }}</li>
+{% endfor %}
+</ul>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Edit Task{% endblock %}
+{% block content %}
+<h1>Edit Task</h1>
+<form method="post">
+    <label>Title: <input type="text" name="title" value="{{ task.title }}" required></label><br>
+    <label>Description: <input type="text" name="description" value="{{ task.description }}"></label><br>
+    <label>Due Date: <input type="date" name="due_date" value="{{ task.due_date }}"></label><br>
+    <label>Priority:
+        <select name="priority">
+            <option value="low" {% if task.priority=='low' %}selected{% endif %}>Low</option>
+            <option value="medium" {% if task.priority=='medium' %}selected{% endif %}>Medium</option>
+            <option value="high" {% if task.priority=='high' %}selected{% endif %}>High</option>
+        </select>
+    </label><br>
+    <label>Assign To:
+        <select name="assigned_to">
+            {% for child in children %}
+                <option value="{{ child._id }}" {% if child._id == task.assigned_to %}selected{% endif %}>{{ child.email }}</option>
+            {% endfor %}
+        </select>
+    </label><br>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+</form>
+{% endblock %}

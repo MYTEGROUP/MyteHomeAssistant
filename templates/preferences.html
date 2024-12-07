@@ -1,0 +1,7 @@
+<!-- Step 14: templates/preferences.html (no explanations) -->
+<form method="post">
+    <label><input type="checkbox" name="tasks_shared" {% if user.shared_features.tasks %}checked{% endif %}> Share Tasks</label><br>
+    <label><input type="checkbox" name="meals_shared" {% if user.shared_features.meals %}checked{% endif %}> Share Meals</label><br>
+    <label><input type="checkbox" name="budget_shared" {% if user.shared_features.budget %}checked{% endif %}> Share Budget</label><br>
+    <button type="submit">Save</button>
+</form>

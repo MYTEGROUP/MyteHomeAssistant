@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Verify Email{% endblock %}
+{% block content %}
+<h2>Check your email for a verification link!</h2>
+<p>Haven't received it? <a href="{{ url_for('auth.resend_verification') }}">Resend email</a></p>
+{% endblock %}

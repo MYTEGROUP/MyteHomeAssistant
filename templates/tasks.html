@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Tasks{% endblock %}
+{% block content %}
+<h1>My Tasks</h1>
+{% if role == "parent" %}
+<a href="{{ url_for('tasks.create_task') }}" class="btn btn-success">Add New Task</a>
+{% endif %}
+<ul class="list-group mt-3">
+{% for t in tasks %}
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+        <div>
+            <strong>{{ t.title }}</strong> ({{ t.priority|capitalize }})<br>
+            <small>{{ t.description }} - Due: {{ t.due_date }} - Status: {{ t.status }}</small>
+        </div>
+        <div>
+            {% if t.status == 'incomplete' and role != 'parent' %}
+            <form method="post" action="{{ url_for('tasks.complete_task', task_id=str(t._id)) }}" style="display:inline;">
+                <button type="submit" class="btn btn-sm btn-primary">Complete</button>
+            </form>
+            {% endif %}
+            {% if role == 'parent' %}
+            <a href="{{ url_for('tasks.edit_task', task_id=str(t._id)) }}" class="btn btn-sm btn-warning">Edit</a>
+            <form method="post" action="{{ url_for('tasks.delete_task', task_id=str(t._id)) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this task?');">
+                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+            </form>
+            {% endif %}
+        </div>
+    </li>
+{% endfor %}
+</ul>
+{% endblock %}

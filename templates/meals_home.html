@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Meals{% endblock %}
+{% block content %}
+<h1>Meal Planner</h1>
+<a href="{{ url_for('meals.create_plan') }}" class="btn btn-primary">Create New Meal Plan</a>
+<form method="post" action="{{ url_for('meals.generate_grocery') }}" style="display:inline;">
+    <button type="submit" class="btn btn-secondary">Generate Grocery List</button>
+</form>
+
+{% if plan %}
+<h2>Current Meal Plan (Week: {{ plan.week_start }})</h2>
+<ul>
+{% for meal in plan.meals %}
+  <li>{{ meal.day }}: {{ meal.name }} (servings: {{ meal.servings }})</li>
+{% endfor %}
+</ul>
+{% else %}
+<p>No meal plan available. Create one!</p>
+{% endif %}
+
+<h2>Grocery List</h2>
+<form method="post" action="{{ url_for('meals.add_grocery_item') }}">
+    <label>Item: <input type="text" name="item_name" required></label>
+    <label>Qty: <input type="text" name="quantity"></label>
+    <button type="submit" class="btn btn-success">Add Item</button>
+</form>
+<ul>
+{% for i in items %}
+  <li>{{ i.name }} ({{ i.quantity }})
+    <form method="post" action="{{ url_for('meals.remove_grocery_item', index=loop.index0) }}" style="display:inline;">
+      <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+    </form>
+  </li>
+{% endfor %}
+</ul>
+{% endblock %}

@@ -1,0 +1,14 @@
+<!-- In calendar.html -->
+<h1>Family Calendar</h1>
+<div id='calendar'></div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var calendarEl = document.getElementById('calendar');
+  var calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    events: '/calendar/events_api', // Create an endpoint that returns JSON events
+    eventColor: '#378006'
+  });
+  calendar.render();
+});
+</script>

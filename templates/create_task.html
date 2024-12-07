@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Create Task{% endblock %}
+{% block content %}
+<h1>Create a Task</h1>
+<form method="post">
+    <label>Title: <input type="text" name="title" required></label><br>
+    <label>Description: <input type="text" name="description"></label><br>
+    <label>Due Date: <input type="date" name="due_date"></label><br>
+    <label>Priority:
+        <select name="priority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+        </select>
+    </label><br>
+    <label>Assign To:
+        <select name="assigned_to">
+            {% for child in children %}
+                <option value="{{ child._id }}">{{ child.email }}</option>
+            {% endfor %}
+        </select>
+    </label><br>
+    <button type="submit" class="btn btn-primary">Create Task</button>
+</form>
+{% endblock %}

@@ -1,0 +1,5 @@
+<!-- Step 16: templates/family_search_results.html (no explanations) -->
+<h1>Family Found: {{ family.name }}</h1>
+<form method="post" action="{{ url_for('family.join_family', fid=str(family._id)) }}">
+    <button type="submit">Join Family</button>
+</form>

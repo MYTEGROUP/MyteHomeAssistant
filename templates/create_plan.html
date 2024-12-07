@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Create Meal Plan{% endblock %}
+{% block content %}
+<h1>Create Meal Plan</h1>
+<form method="post">
+    <label>Week Start: <input type="date" name="week_start" required></label><br>
+    {% for day in ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"] %}
+    <h3>{{ day }}</h3>
+    <label>Meal Name: <input type="text" name="meal_{{day|lower}}"></label><br>
+    <label>Servings: <input type="number" name="servings_{{day|lower}}" value="4"></label><br>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Save Plan</button>
+</form>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Family Members{% endblock %}
+{% block content %}
+<h1>Family Members of {{ family.name }}</h1>
+<ul>
+{% for m in members %}
+  <li>{{ m.name }} ({{ m.email }})</li>
+{% endfor %}
+</ul>
+<a href="{{ url_for('family.invite_member') }}">Invite More Members</a>
+{% endblock %}

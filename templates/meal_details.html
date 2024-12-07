@@ -1,0 +1,11 @@
+<!-- Step 17: templates/meal_details.html (no explanations) -->
+<h2>{{ meal.day }}: {{ meal.name }}</h2>
+<p>Servings: {{ meal.servings }}</p>
+<h3>Ingredients:</h3>
+<ul>
+{% for ing in meal.ingredients %}
+  <li>{{ ing }}</li>
+{% endfor %}
+</ul>
+<h3>Instructions:</h3>
+<p>{{ meal.instructions }}</p>

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+{% if email_not_verified %}
+<div class="alert alert-warning">
+  Your email is not verified. <a href="{{ url_for('auth.resend_verification') }}">Resend verification email</a>.
+</div>
+{% endif %}
+<h1>Dashboard</h1>
+<h2>Upcoming Tasks</h2>
+<ul>
+{% for t in tasks %}
+  <li>{{ t.title }} - due {{ t.due_date }}</li>
+{% endfor %}
+</ul>
+<a href="{{ url_for('tasks.list_tasks') }}">View All Tasks</a>
+
+<h2>Upcoming Events</h2>
+<ul>
+{% for e in events %}
+  <li>{{ e.title }} on {{ e.date }} at {{ e.time }}</li>
+{% endfor %}
+</ul>
+<a href="{{ url_for('calendar.view_calendar') }}">View Calendar</a>
+
+<h2>Recent Messages</h2>
+<ul>
+{% for m in messages %}
+  <li>{{ m.content }} ({{m.timestamp}})</li>
+{% endfor %}
+</ul>
+<a href="{{ url_for('messaging.messaging_home') }}">View All Messages</a>
+
+<h2>Budget Summary</h2>
+<p>Total Expenses: {{ total_expenses }}</p>
+<a href="{{ url_for('budgeting.budgeting_home') }}">View Budget</a>
+
+<h2>Meal Plan</h2>
+{% if meal_plan %}
+<p>Week starting: {{ meal_plan.week_start }}</p>
+<ul>
+{% for meal in meal_plan.meals %}
+  <li>{{ meal.day }}: {{ meal.name }} (servings: {{ meal.servings }})</li>
+{% endfor %}
+</ul>
+<a href="{{ url_for('meals.meals_home') }}">View Meals</a>
+{% else %}
+<p>No meal plan found.</p>
+{% endif %}
+{% endblock %}
