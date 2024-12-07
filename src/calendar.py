@@ -1,7 +1,10 @@
-# Step 6: src/calendar.py (no explanations, final integrated code)
-from flask import Blueprint, render_template, request, redirect, url_for, g, flash
+from flask import Blueprint, render_template, request, redirect, url_for, g, flash, send_file
 from bson.objectid import ObjectId
+from datetime import datetime, timedelta
 from src.utils.db import get_db
+from ics import Calendar, Event as ICSEvent
+import io
+from src.utils.mailer import send_email
 
 db = get_db()
 calendar_blueprint = Blueprint("calendar", __name__)
@@ -18,49 +21,103 @@ def login_required(f):
 @login_required
 def view_calendar():
     family_id = ObjectId(g.user["family_id"])
-    events = list(db.events.find({"family_id": family_id}).sort("date", 1))
-    return render_template("calendar.html", events=events)
 
-@calendar_blueprint.route("/search")
-@login_required
-def search_events():
-    query = request.args.get("q", "")
-    family_id = ObjectId(g.user["family_id"])
-    events = list(db.events.find({
-        "family_id": family_id,
-        "$or": [
-            {"title": {"$regex": query, "$options": "i"}},
-            {"description": {"$regex": query, "$options": "i"}}
+    # Filters from query params
+    search = request.args.get("search", "")
+    category = request.args.get("category", "")
+    start_date = request.args.get("start_date", "")
+    end_date = request.args.get("end_date", "")
+
+    query = {"family_id": family_id}
+
+    if search:
+        query["$or"] = [
+            {"title": {"$regex": search, "$options": "i"}},
+            {"description": {"$regex": search, "$options": "i"}}
         ]
-    }))
-    return render_template("calendar.html", events=events)
+    if category:
+        query["category"] = category
+
+    # Date filtering
+    if start_date and end_date:
+        query["date"] = {"$gte": start_date, "$lte": end_date}
+    elif start_date:
+        query["date"] = {"$gte": start_date}
+    elif end_date:
+        query["date"] = {"$lte": end_date}
+
+    events = list(db.events.find(query).sort("date", 1))
+    # Convert ObjectIds to strings
+    for ev in events:
+        ev["_id"] = str(ev["_id"])
+
+    categories = db.events.distinct("category", {"family_id": family_id})
+
+    return render_template(
+        "calendar.html",
+        events=events,
+        categories=categories,
+        search=search,
+        category=category,
+        start_date=start_date,
+        end_date=end_date
+    )
 
 @calendar_blueprint.route("/add", methods=["GET","POST"])
 @login_required
 def add_event():
+    family_id = ObjectId(g.user["family_id"])
+    user_id = ObjectId(g.user["user_id"])
     if request.method == "POST":
-        family_id = ObjectId(g.user["family_id"])
         title = request.form.get("title")
         date = request.form.get("date")
-        time = request.form.get("time")
-        description = request.form.get("description")
-        category = request.form.get("category", "family")
+        time = request.form.get("time", "00:00")
+        description = request.form.get("description", "")
+        category = request.form.get("category", "general")
         visibility = request.form.get("visibility", "family")
         recurrence = request.form.get("recurrence", "none")
+        color = request.form.get("color", "#378006")
 
         new_event = {
             "family_id": family_id,
-            "user_id": ObjectId(g.user["user_id"]),
+            "user_id": user_id,
             "title": title,
             "date": date,
             "time": time,
             "description": description,
             "category": category,
             "visibility": visibility,
-            "recurrence": recurrence
+            "recurrence": recurrence,
+            "color": color
         }
-        db.events.insert_one(new_event)
-        flash("Event added!")
+
+        inserted_ids = []
+        if recurrence in ["daily", "weekly", "monthly"]:
+            base_date = datetime.strptime(date, "%Y-%m-%d")
+            increments = {
+                "daily": 1,
+                "weekly": 7,
+                "monthly": 30
+            }
+            for i in range(4):
+                dt = base_date + timedelta(days=increments[recurrence] * i)
+                ev = new_event.copy()
+                ev["date"] = dt.strftime("%Y-%m-%d")
+                inserted_id = db.events.insert_one(ev).inserted_id
+                inserted_ids.append(inserted_id)
+        else:
+            inserted_id = db.events.insert_one(new_event).inserted_id
+            inserted_ids.append(inserted_id)
+
+        # Send email notifications to family members after creating events
+        family = db.families.find_one({"_id": family_id})
+        members = db.users.find({"_id": {"$in": family["members"]}})
+        subject = "New Event(s) Added"
+        body = f"Hello,\n\nNew event(s) have been added to your family calendar:\n\nTitle: {title}\nDate: {date} {time}\nDescription: {description}\n\nLogin to view more details."
+        for m in members:
+            send_email(m["email"], subject, body)
+
+        flash("Event(s) added and family notified!")
         return redirect(url_for("calendar.view_calendar"))
 
     return render_template("add_event.html")
@@ -69,7 +126,8 @@ def add_event():
 @login_required
 def edit_event(event_id):
     family_id = ObjectId(g.user["family_id"])
-    event = db.events.find_one({"_id": ObjectId(event_id), "family_id": family_id})
+    obj_id = ObjectId(event_id)
+    event = db.events.find_one({"_id": obj_id, "family_id": family_id})
     if not event:
         return "Event not found", 404
 
@@ -77,23 +135,30 @@ def edit_event(event_id):
         title = request.form.get("title")
         date = request.form.get("date")
         time = request.form.get("time")
-        description = request.form.get("description")
-        db.events.update_one({"_id": ObjectId(event_id)}, {"$set": {
+        description = request.form.get("description", "")
+        category = request.form.get("category", "general")
+        color = request.form.get("color", "#378006")
+
+        db.events.update_one({"_id": obj_id}, {"$set": {
             "title": title,
             "date": date,
             "time": time,
-            "description": description
+            "description": description,
+            "category": category,
+            "color": color
         }})
         flash("Event updated!")
         return redirect(url_for("calendar.view_calendar"))
 
+    event["_id"] = str(event["_id"])
     return render_template("edit_event.html", event=event)
 
 @calendar_blueprint.route("/delete/<event_id>", methods=["POST"])
 @login_required
 def delete_event(event_id):
     family_id = ObjectId(g.user["family_id"])
-    result = db.events.delete_one({"_id": ObjectId(event_id), "family_id": family_id})
+    obj_id = ObjectId(event_id)
+    result = db.events.delete_one({"_id": obj_id, "family_id": family_id})
     if result.deleted_count:
         flash("Event deleted!")
     else:
@@ -107,10 +172,63 @@ def events_api():
     events = list(db.events.find({"family_id": family_id}))
     fullcal_events = []
     for e in events:
+        start = f"{e['date']}T{e['time']}"
         fullcal_events.append({
             "title": e["title"],
-            "start": f"{e['date']}T{e['time']}",
+            "start": start,
             "description": e.get("description",""),
-            "color": "#f00" if e.get("visibility","family") == "personal" else "#0f0"
+            "color": e.get("color", "#378006")
         })
     return {"events": fullcal_events}
+
+@calendar_blueprint.route("/import_ics", methods=["GET","POST"])
+@login_required
+def import_ics():
+    if request.method == "POST":
+        file = request.files.get("ics_file")
+        if not file:
+            flash("No ICS file provided.")
+            return redirect(url_for("calendar.view_calendar"))
+
+        data = file.read().decode("utf-8")
+        c = Calendar(data)
+        family_id = ObjectId(g.user["family_id"])
+        for ev in c.events:
+            event_date = ev.begin.date().strftime("%Y-%m-%d")
+            event_time = ev.begin.time().strftime("%H:%M") if ev.begin.time() else "00:00"
+            new_event = {
+                "family_id": family_id,
+                "user_id": ObjectId(g.user["user_id"]),
+                "title": ev.name,
+                "date": event_date,
+                "time": event_time,
+                "description": ev.description if ev.description else "",
+                "category": "imported",
+                "visibility": "family",
+                "recurrence": "none",
+                "color": "#0000FF"
+            }
+            db.events.insert_one(new_event)
+        flash("ICS file imported successfully!")
+        return redirect(url_for("calendar.view_calendar"))
+
+    return render_template("import_ics.html")
+
+@calendar_blueprint.route("/export_ics")
+@login_required
+def export_ics():
+    family_id = ObjectId(g.user["family_id"])
+    events = list(db.events.find({"family_id": family_id}))
+    c = Calendar()
+    for e in events:
+        ev = ICSEvent()
+        dt_str = f"{e['date']} {e['time']}"
+        dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+        ev.name = e["title"]
+        ev.begin = dt
+        ev.description = e.get("description", "")
+        c.events.add(ev)
+    output = io.StringIO(str(c))
+    mem = io.BytesIO(output.getvalue().encode('utf-8'))
+    mem.seek(0)
+    return send_file(mem, download_name="family_calendar.ics", as_attachment=True, mimetype="text/calendar")

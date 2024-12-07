@@ -1,18 +1,15 @@
-# Step 5: src/family.py (no explanations, final integrated code)
+# src/family.py
 from flask import Blueprint, g, redirect, url_for, render_template, request, flash
 from bson.objectid import ObjectId
 from src.utils.db import get_db
+from src.utils.security import login_required
 
 family_blueprint = Blueprint("family", __name__)
 db = get_db()
 
-def login_required(f):
-    def wrapper(*args, **kwargs):
-        if not g.user:
-            return redirect(url_for("auth.login_user"))
-        return f(*args, **kwargs)
-    wrapper.__name__ = f.__name__
-    return wrapper
+def is_parent(user_id):
+    user = db.users.find_one({"_id": ObjectId(user_id)})
+    return user.get("role", "child") == "parent"
 
 @family_blueprint.route("/members")
 @login_required
@@ -76,3 +73,56 @@ def update_preferences():
         flash("Preferences updated!")
         return redirect(url_for("family.family_members"))
     return render_template("preferences.html", user=user)
+
+# New routes for managing groups
+@family_blueprint.route("/groups", methods=["GET", "POST"])
+@login_required
+def manage_groups():
+    family_id = ObjectId(g.user["family_id"])
+    if request.method == "POST":
+        if not is_parent(g.user["user_id"]):
+            flash("Only a parent can create groups.")
+            return redirect(url_for("family.manage_groups"))
+        group_name = request.form.get("group_name")
+        if not group_name:
+            flash("Group name required.")
+            return redirect(url_for("family.manage_groups"))
+        db.groups.insert_one({"family_id": family_id, "name": group_name, "members": []})
+        flash("Group created!")
+        return redirect(url_for("family.manage_groups"))
+
+    groups = list(db.groups.find({"family_id": family_id}))
+    return render_template("groups.html", groups=groups)
+
+@family_blueprint.route("/group/<group_id>/add_member", methods=["POST"])
+@login_required
+def add_group_member(group_id):
+    if not is_parent(g.user["user_id"]):
+        flash("Only a parent can manage groups.")
+        return redirect(url_for("family.manage_groups"))
+
+    family_id = ObjectId(g.user["family_id"])
+    group = db.groups.find_one({"_id": ObjectId(group_id), "family_id": family_id})
+    if not group:
+        flash("Group not found.")
+        return redirect(url_for("family.manage_groups"))
+    member_id = request.form.get("member_id")
+    if member_id:
+        db.groups.update_one({"_id": group["_id"]}, {"$addToSet": {"members": ObjectId(member_id)}})
+        flash("Member added to group!")
+    return redirect(url_for("family.manage_groups"))
+
+@family_blueprint.route("/group/<group_id>/remove_member/<member_id>", methods=["POST"])
+@login_required
+def remove_group_member(group_id, member_id):
+    if not is_parent(g.user["user_id"]):
+        flash("Only a parent can manage groups.")
+        return redirect(url_for("family.manage_groups"))
+    family_id = ObjectId(g.user["family_id"])
+    group = db.groups.find_one({"_id": ObjectId(group_id), "family_id": family_id})
+    if not group:
+        flash("Group not found.")
+        return redirect(url_for("family.manage_groups"))
+    db.groups.update_one({"_id": group["_id"]}, {"$pull": {"members": ObjectId(member_id)}})
+    flash("Member removed from group.")
+    return redirect(url_for("family.manage_groups"))

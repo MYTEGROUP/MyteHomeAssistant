@@ -1,4 +1,4 @@
-# Step 12: src/utils/mailer.py (no explanations)
+# src/utils/mailer.py
 import os
 import smtplib
 from email.mime.text import MIMEText

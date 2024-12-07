@@ -1,4 +1,4 @@
-# src/utils/openai_client.py (updated to add image generation and audio transcription)
+# src/utils/openai_client.py
 import os
 import openai
 
@@ -46,10 +46,6 @@ def generate_image(meal_name, description):
     return img_response["data"][0]["url"]
 
 def transcribe_audio(audio_path):
-    # audio_path is a file-like object or path to a local file
-    # OpenAI python library doesn't currently do direct whisper calls in older versions
-    # We'll assume we have openai.Audio.transcribe
-    # If not, user must supply a supported method or read binary and pass as 'file'
     with open(audio_path, "rb") as f:
         transcript = openai.Audio.transcribe("whisper-1", f)
     return transcript

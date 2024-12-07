@@ -8,9 +8,9 @@
 </form>
 <ul class="mt-3">
 {% for m in messages %}
-  <li>{{ m.sender_id }}: {{ m.content }} ({{m.timestamp}})
+  <li>{{ m.sender_id }}: {{ m.content }} ({{ m.timestamp }})
     {% if m.sender_id != g.user.user_id and g.user.user_id not in m.read_by %}
-    <form method="post" action="{{ url_for('messaging.read_message', message_id=str(m._id)) }}" style="display:inline;">
+    <form method="post" action="{{ url_for('messaging.read_message', message_id=m._id) }}" style="display:inline;">
       <button type="submit" class="btn btn-sm btn-secondary">Mark as Read</button>
     </form>
     {% endif %}

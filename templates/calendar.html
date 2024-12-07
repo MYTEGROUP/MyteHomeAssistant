@@ -1,14 +1,63 @@
-<!-- In calendar.html -->
+{% extends "base.html" %}
+{% block title %}Family Calendar{% endblock %}
+{% block content %}
 <h1>Family Calendar</h1>
+
+<form method="get" class="mb-3">
+    <div class="row">
+        <div class="col-md-3">
+            <input type="text" name="search" class="form-control" placeholder="Search events" value="{{ search }}">
+        </div>
+        <div class="col-md-2">
+            <select name="category" class="form-control">
+                <option value="">All Categories</option>
+                {% for c in categories %}
+                <option value="{{ c }}" {% if category == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+        </div>
+        <div class="col-md-2">
+            <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+        </div>
+        <div class="col-md-1">
+            <button type="submit" class="btn btn-primary">Filter</button>
+        </div>
+    </div>
+</form>
+
+<a href="{{ url_for('calendar.add_event') }}" class="btn btn-success mb-3">Add Event</a>
+<a href="{{ url_for('calendar.import_ics') }}" class="btn btn-info mb-3">Import ICS</a>
+<a href="{{ url_for('calendar.export_ics') }}" class="btn btn-secondary mb-3">Export ICS</a>
+
 <div id='calendar'></div>
+
+<h2>Event List</h2>
+<ul class="list-group">
+{% for e in events %}
+  <li class="list-group-item">
+    <strong>{{ e.title }}</strong> ({{ e.category }} - {{ e.date }} {{ e.time }})<br>
+    {{ e.description }}<br>
+    <div class="mt-2">
+      <a href="{{ url_for('calendar.edit_event', event_id=e._id) }}" class="btn btn-sm btn-warning">Edit</a>
+      <form method="post" action="{{ url_for('calendar.delete_event', event_id=e._id) }}" style="display:inline;" onsubmit="return confirm('Delete this event?');">
+        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+      </form>
+    </div>
+  </li>
+{% endfor %}
+</ul>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   var calendarEl = document.getElementById('calendar');
   var calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: 'dayGridMonth',
-    events: '/calendar/events_api', // Create an endpoint that returns JSON events
-    eventColor: '#378006'
+    events: '/calendar/events_api'
   });
   calendar.render();
 });
 </script>
+{% endblock %}

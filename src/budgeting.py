@@ -1,4 +1,4 @@
-# Step 7: src/budgeting.py (no explanations)
+# src/budgeting.py
 from flask import Blueprint, g, redirect, url_for, render_template, request, flash
 from bson.objectid import ObjectId
 from src.utils.db import get_db

@@ -1,14 +1,16 @@
-# Step 4: src/auth.py (no explanations, final integrated code)
+# src/auth.py
 from datetime import datetime, timedelta
 import jwt
 import os
 import secrets
 from flask import Blueprint, request, render_template, redirect, url_for, session, flash, g
-from pymongo import MongoClient
 from passlib.context import CryptContext
-from src.utils.mailer import send_email
 from bson.objectid import ObjectId
+from src.utils.mailer import send_email
 from src.utils.db import get_db
+from dotenv import load_dotenv
+
+load_dotenv()
 
 auth_blueprint = Blueprint("auth", __name__)
 db = get_db()
@@ -24,6 +26,11 @@ def register_user():
         password = request.form.get("password")
         family_invite = request.form.get("family_invite")
         name = request.form.get("name", email)
+        role = request.form.get("role", "child")
+        username = request.form.get("username")
+        if not username:
+            # derive username from email (before '@')
+            username = email.split('@')[0]
 
         if not email or not password:
             return render_template("register.html", error="Email and password required")
@@ -51,6 +58,8 @@ def register_user():
             "hashed_password": hashed_pw,
             "family_id": family_id,
             "name": name,
+            "role": role,
+            "username": username,
             "shared_features": {
                 "tasks": True,
                 "meals": True,
@@ -140,6 +149,7 @@ def request_password_reset():
         email = request.form.get("email")
         user = db.users.find_one({"email": email})
         if user:
+            import secrets
             reset_token = secrets.token_urlsafe(32)
             expires = datetime.utcnow() + timedelta(hours=1)
             db.users.update_one({"_id": user["_id"]}, {"$set": {

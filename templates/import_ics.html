@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Import ICS{% endblock %}
+{% block content %}
+<h1>Import ICS File</h1>
+<form method="post" enctype="multipart/form-data">
+    <div class="mb-3">
+        <label>ICS File</label>
+        <input type="file" name="ics_file" class="form-control" accept=".ics" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Import</button>
+</form>
+{% endblock %}

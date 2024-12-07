@@ -1,31 +1,240 @@
 {% extends "base.html" %}
 {% block title %}Tasks{% endblock %}
 {% block content %}
-<h1>My Tasks</h1>
-{% if role == "parent" %}
-<a href="{{ url_for('tasks.create_task') }}" class="btn btn-success">Add New Task</a>
-{% endif %}
-<ul class="list-group mt-3">
+<h1>Tasks</h1>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    {% if role == 'parent' %}
+    <form id="quick-add-form" class="row g-2">
+        <div class="col-md-2">
+            <input type="text" name="title" class="form-control" placeholder="Title" required>
+        </div>
+        <div class="col-md-2">
+            <input type="text" name="description" class="form-control" placeholder="Description">
+        </div>
+        <div class="col-md-2">
+            <input type="date" name="due_date" class="form-control">
+        </div>
+        <div class="col-md-1">
+            <select name="priority" class="form-control">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select name="assigned_to" class="form-control" required>
+                {% for m in members %}
+                <option value="{{ m._id }}">{{ m.email }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select name="category" class="form-control">
+                <option value="">No Category</option>
+                {% for cat in categories %}
+                <option value="{{ cat.name }}">{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-1">
+            <button type="submit" class="btn btn-primary">Add</button>
+        </div>
+    </form>
+    {% endif %}
+
+    <div>
+        <form method="get" class="d-inline-block">
+            <select name="category" class="form-select d-inline-block w-auto" onchange="this.form.submit()">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat.name }}" {% if request.args.get('category') == cat.name %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+</div>
+
+<div id="error-alert" class="alert alert-danger d-none"></div>
+
+<ul class="list-group mt-3" id="tasks-list">
 {% for t in tasks %}
-    <li class="list-group-item d-flex justify-content-between align-items-center">
-        <div>
-            <strong>{{ t.title }}</strong> ({{ t.priority|capitalize }})<br>
-            <small>{{ t.description }} - Due: {{ t.due_date }} - Status: {{ t.status }}</small>
+    <li class="list-group-item" data-task-id="{{ t._id }}">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <strong class="editable field-title">{{ t.title }}</strong>
+                {% if t.priority == 'high' %}
+                    <span class="badge bg-danger">High</span>
+                {% elif t.priority == 'low' %}
+                    <span class="badge bg-secondary">Low</span>
+                {% else %}
+                    <span class="badge bg-info">Medium</span>
+                {% endif %}
+
+                {% if t.overdue %}
+                    <span class="badge bg-warning text-dark">Overdue</span>
+                {% endif %}
+
+                {% if t.category %}
+                    <span class="badge bg-light text-dark">{{ t.category }}</span>
+                {% endif %}
+
+                <br>
+                <small>
+                    <span class="editable field-description">{{ t.description }}</span>
+                    - Due: <span class="editable field-due_date">{{ t.due_date }}</span>
+                    - Status: {{ t.status|capitalize }}
+                </small><br>
+                Assigned to:
+                <span class="editable field-assigned_to" data-type="select" data-options='{{ members|tojson }}'>{{ t.assigned_to }}</span>
+            </div>
+            <div>
+                {% if t.status == 'incomplete' and role == 'child' and t.assigned_to == g.user.user_id %}
+                <form method="post" action="{{ url_for('tasks.in_progress_task', task_id=t._id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-sm btn-warning">In Progress</button>
+                </form>
+                <form method="post" action="{{ url_for('tasks.complete_task', task_id=t._id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-sm btn-primary">Complete</button>
+                </form>
+                {% elif t.status == 'in_progress' and role == 'child' and t.assigned_to == g.user.user_id %}
+                <form method="post" action="{{ url_for('tasks.complete_task', task_id=t._id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-sm btn-primary">Complete</button>
+                </form>
+                {% endif %}
+                {% if role == 'parent' %}
+                <a href="{{ url_for('tasks.edit_task', task_id=t._id) }}" class="btn btn-sm btn-warning">Edit</a>
+                <form method="post" action="{{ url_for('tasks.delete_task', task_id=t._id) }}" style="display:inline;" onsubmit="return confirm('Delete this task?');">
+                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                </form>
+                {% endif %}
+            </div>
         </div>
-        <div>
-            {% if t.status == 'incomplete' and role != 'parent' %}
-            <form method="post" action="{{ url_for('tasks.complete_task', task_id=str(t._id)) }}" style="display:inline;">
-                <button type="submit" class="btn btn-sm btn-primary">Complete</button>
-            </form>
-            {% endif %}
-            {% if role == 'parent' %}
-            <a href="{{ url_for('tasks.edit_task', task_id=str(t._id)) }}" class="btn btn-sm btn-warning">Edit</a>
-            <form method="post" action="{{ url_for('tasks.delete_task', task_id=str(t._id)) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this task?');">
-                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-            </form>
-            {% endif %}
-        </div>
+        <!-- Add Comment Form -->
+        <form method="post" action="{{ url_for('tasks.add_comment', task_id=t._id) }}" class="mt-2">
+            <div class="input-group input-group-sm">
+                <input type="text" class="form-control" name="comment" placeholder="Add a comment..." required>
+                <button class="btn btn-secondary">Add Comment</button>
+            </div>
+        </form>
+        {% if t.comments and t.comments|length > 0 %}
+        <ul class="mt-2 list-group list-group-flush">
+            {% for c in t.comments %}
+            <li class="list-group-item">
+                {{ c.comment }} <br>
+                <small>by {{ c.user_id }} at {{ c.timestamp }}</small>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
     </li>
 {% endfor %}
 </ul>
+
+{% if role == 'parent' %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const quickAddForm = document.getElementById('quick-add-form');
+    const errorAlert = document.getElementById('error-alert');
+
+    quickAddForm.addEventListener('submit', function(e){
+        e.preventDefault();
+        errorAlert.classList.add('d-none');
+        const formData = new FormData(quickAddForm);
+
+        fetch("{{ url_for('tasks.ajax_create_task') }}", {
+            method: "POST",
+            body: formData
+        }).then(res => {
+            if(!res.ok) {
+                return res.json().then(data => {throw data});
+            }
+            return res.json();
+        })
+        .then(data => {
+            if(data.error) {
+                errorAlert.innerText = data.error;
+                errorAlert.classList.remove('d-none');
+            } else {
+                location.reload();
+            }
+        })
+        .catch(err => {
+            errorAlert.innerText = err.error || "Unknown error occurred.";
+            errorAlert.classList.remove('d-none');
+        });
+    });
+
+    // Inline editing for parents
+    if('{{ role }}' === 'parent') {
+        document.querySelectorAll('.editable').forEach(el => {
+            el.addEventListener('click', function(){
+                let field = null;
+                if(this.classList.contains('field-title')) field = 'title';
+                else if(this.classList.contains('field-description')) field = 'description';
+                else if(this.classList.contains('field-due_date')) field = 'due_date';
+                else if(this.classList.contains('field-assigned_to')) field = 'assigned_to';
+
+                if(!field) return;
+
+                const li = this.closest('li.list-group-item');
+                const taskId = li.getAttribute('data-task-id');
+                const oldValue = this.innerText.trim();
+
+                let input;
+                if(field === 'assigned_to') {
+                    const opts = JSON.parse(this.getAttribute('data-options'));
+                    input = document.createElement('select');
+                    opts.forEach(o => {
+                        const opt = document.createElement('option');
+                        opt.value = o._id;
+                        opt.innerText = o.email;
+                        if(o._id === oldValue) opt.selected = true;
+                        input.appendChild(opt);
+                    });
+                } else {
+                    input = document.createElement('input');
+                    input.type = (field === 'due_date') ? 'date' : 'text';
+                    input.value = oldValue;
+                }
+
+                this.innerHTML = '';
+                this.appendChild(input);
+                input.focus();
+
+                input.addEventListener('blur', () => {
+                    const newValue = input.value;
+                    const formData = new FormData();
+                    formData.append('field', field);
+                    formData.append('value', newValue);
+                    fetch("{{ url_for('tasks.inline_update', task_id='') }}"+taskId, {
+                        method: 'POST',
+                        body: formData
+                    }).then(res=> {
+                        if(!res.ok) {return res.json().then(d=>{throw d})}
+                        return res.json();
+                    }).then(data => {
+                        if(data.error) {
+                            this.innerText = oldValue;
+                            alert(data.error);
+                        } else {
+                            if(field === 'assigned_to') {
+                                const opts = JSON.parse(this.getAttribute('data-options'));
+                                const match = opts.find(o=>o._id === newValue);
+                                this.innerText = match ? match._id : newValue;
+                            } else {
+                                this.innerText = newValue;
+                            }
+                        }
+                    }).catch(err=>{
+                        console.error(err);
+                        this.innerText = oldValue;
+                        alert(err.error || "Error updating task");
+                    });
+                }, {once:true});
+            });
+        });
+    }
+});
+</script>
+{% endif %}
 {% endblock %}

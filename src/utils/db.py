@@ -1,4 +1,4 @@
-# Step 11: src/utils/db.py (no explanations)
+# src/utils/db.py
 import os
 from pymongo import MongoClient
 

@@ -1,4 +1,3 @@
-# app.py (ensure main guard is present at the end)
 from bson import ObjectId
 from flask import Flask, render_template, g, request, redirect, url_for, session
 from dotenv import load_dotenv
@@ -20,7 +19,7 @@ app.secret_key = "supersecretflaskkey"
 
 app.register_blueprint(auth_blueprint, url_prefix="/auth")
 app.register_blueprint(family_blueprint, url_prefix="/family")
-app.register_blueprint(tasks_blueprint, url_prefix="/tasks")
+app.register_blueprint(tasks_blueprint, url_prefix="/tasks")  # Tasks blueprint registered here
 app.register_blueprint(calendar_blueprint, url_prefix="/calendar")
 app.register_blueprint(budgeting_blueprint, url_prefix="/budget")
 app.register_blueprint(meals_blueprint, url_prefix="/meals")

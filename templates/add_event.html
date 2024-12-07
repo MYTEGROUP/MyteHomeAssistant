@@ -3,10 +3,46 @@
 {% block content %}
 <h1>Add Event</h1>
 <form method="post">
-    <label>Title: <input type="text" name="title" required></label><br>
-    <label>Date: <input type="date" name="date"></label><br>
-    <label>Time: <input type="time" name="time"></label><br>
-    <label>Description: <input type="text" name="description"></label><br>
-    <button type="submit">Add Event</button>
+    <div class="mb-3">
+        <label>Title</label>
+        <input type="text" name="title" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label>Date</label>
+        <input type="date" name="date" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label>Time</label>
+        <input type="time" name="time" class="form-control">
+    </div>
+    <div class="mb-3">
+        <label>Description</label>
+        <input type="text" name="description" class="form-control">
+    </div>
+    <div class="mb-3">
+        <label>Category</label>
+        <input type="text" name="category" class="form-control" value="general">
+    </div>
+    <div class="mb-3">
+        <label>Visibility</label>
+        <select name="visibility" class="form-control">
+            <option value="family">Family</option>
+            <option value="personal">Personal</option>
+        </select>
+    </div>
+    <div class="mb-3">
+        <label>Recurrence</label>
+        <select name="recurrence" class="form-control">
+            <option value="none">None</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+        </select>
+    </div>
+    <div class="mb-3">
+        <label>Color (for display)</label>
+        <input type="color" name="color" class="form-control" value="#378006">
+    </div>
+    <button type="submit" class="btn btn-primary">Add Event</button>
 </form>
 {% endblock %}

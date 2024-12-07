@@ -1,4 +1,4 @@
-# src/meals.py (updated to add image generation after meal plan creation and actual audio upload route)
+# src/meals.py
 from flask import Blueprint, g, redirect, url_for, render_template, request, flash
 from bson.objectid import ObjectId
 from datetime import datetime
@@ -6,7 +6,6 @@ from werkzeug.utils import secure_filename
 import os
 from src.utils.db import get_db
 from src.utils.openai_client import generate_meals, generate_image, transcribe_audio
-import json
 
 meals_blueprint = Blueprint("meals", __name__)
 db = get_db()
@@ -111,17 +110,16 @@ def voice_input_audio():
     audio_path = os.path.join(UPLOAD_FOLDER, filename)
     audio_file.save(audio_path)
     transcript = transcribe_audio(audio_path)
-    # Parse transcript for preferences (simple example)
+
     user_id = ObjectId(g.user["user_id"])
     user = db.users.find_one({"_id": user_id})
     likes = user.get("dietary_preferences", {}).get("likes", [])
     dislikes = user.get("dietary_preferences", {}).get("dislikes", [])
 
-    # Example: If transcript contains "I like broccoli"
     if "broccoli" in transcript.lower() and "like" in transcript.lower():
         if "broccoli" not in likes:
             likes.append("broccoli")
-    # Example: If transcript contains "I hate onions"
+
     if "onions" in transcript.lower() and ("hate" in transcript.lower() or "dislike" in transcript.lower()):
         if "onions" not in dislikes:
             dislikes.append("onions")
@@ -161,6 +159,7 @@ def generate_meal_plan():
 
     meal_plan_json = generate_meals(family_preferences)
     try:
+        import json
         meal_plan = json.loads(meal_plan_json)
     except:
         flash("Could not parse meal plan. Please try again.")
